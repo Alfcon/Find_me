@@ -1,0 +1,95 @@
+# Find My Footprint — example profile
+#
+# Copy this file to profile.yaml and replace the examples with your own
+# identifiers. `python -m footprint init` creates the same structure safely.
+#
+# This file is personal data. Keep it private: chmod 600 profile.yaml
+# API keys are read from environment variables, never from this file.
+
+version: 1
+
+profile:
+  display_name: "Alex Example"
+  previous_names: []
+  emails:
+    - "alex@example.com"
+  phones:
+    - "+61 400 000 000"
+  usernames:
+    - "alex-example"
+  addresses:
+    - "12 Example Street, Melbourne VIC 3000"
+  locations:
+    - "Melbourne, Australia"
+  websites:
+    - "https://example.com"
+  domains: []
+  country: "Australia"
+  notes: ""
+
+search:
+  # duckduckgo and bing work without a key. Both are best-effort HTML
+  # endpoints and can serve bot challenges; optional API engines are more
+  # reliable: brave, google_cse, serpapi, serper.
+  engines:
+    - duckduckgo
+    - bing
+  fallback_engine: bing
+  max_queries: 24
+  results_per_query: 8
+  # Be polite. The minimum accepted value is 1 second.
+  delay_seconds: 2.0
+  region: "au-en"          # au-en, us-en, uk-en, ca-en, nz-en, ie-en
+  exclude_domains:
+    - "example.org"
+  # Broad name-only and platform probes are useful when an email is not
+  # visible on the page. They are labelled low-confidence in the report.
+  broad_name: true
+  platform_probes: true
+  platform_probe_count: 4
+  # Off by default: site: queries against people-search brokers are noisy and
+  # may be blocked. Enable if you are prepared to verify each hit.
+  broker_probes: false
+  broker_probe_count: 6
+
+checks:
+  gravatar: true
+  github: true
+  gitlab: true
+  reddit: true
+  keybase: true
+  bluesky: true
+  npm: true
+  rdap: true
+  # HIBP is preferred when HIBP_API_KEY is set. Without it, the free
+  # XposedOrNot breach index is used instead.
+  breaches: true
+  xposedornot: true
+  github_commits: true
+  github_search: true
+  openpgp: true
+  # Australian Business Register (public ABN/entity search by name).
+  abn: true
+  # Free Hudson Rock infostealer index. Sends the email to Hudson Rock.
+  hudsonrock: true
+  mastodon: true
+
+brokers:
+  # AU and GLOBAL are the defaults for an Australian profile. Add US and UK if
+  # you have lived or worked there. GLOBAL is always included.
+  regions:
+    - AU
+    - GLOBAL
+    # - US
+    # - UK
+
+report:
+  output: "reports/footprint-report.html"
+  # Set true to mask identifiers in the report and its downloadable JSON.
+  # Result URLs are not masked; review before sharing.
+  redact: false
+  title: "My Digital Footprint Audit"
+
+storage:
+  database: ".footprint/footprint.db"
+  cache: ".footprint/cache"

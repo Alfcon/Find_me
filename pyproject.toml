@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "find-my-footprint"
+version = "1.2.0"
+description = "Local-first digital footprint audit and removal planner"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Find My Footprint contributors" }]
+keywords = ["privacy", "digital-footprint", "data-brokers", "osint", "self-audit"]
+dependencies = [
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "PyYAML>=6.0",
+  "rich>=13.7",
+]
+
+[project.scripts]
+footprint = "footprint.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["footprint*"]
+
+[tool.setuptools.package-data]
+footprint = ["data/*.yaml"]

@@ -1,0 +1,503 @@
+# Curated removal directory for Find My Footprint.
+#
+# These links go to the operators' own pages. They were checked on 2026-10-23,
+# but opt-out processes change frequently and some sites use bot protection
+# that blocks automated link checks. Always verify a destination before
+# submitting identity documents or paying anyone.
+#
+# Each entry is deliberately explicit about what it can and cannot do. The tool
+# never submits an opt-out form for you.
+
+brokers:
+
+  - id: zoominfo
+    name: ZoomInfo
+    regions: [US, GLOBAL]
+    category: data_broker
+    domains: [zoominfo.com]
+    optout_url: https://www.zoominfo.com/trust-center/your-privacy
+    method: privacy request / online form
+    difficulty: medium
+    minutes: 15
+    requirements: Work email and the profile URL
+    notes: >-
+      B2B contact database that often lists employment, work email, and direct
+      phone numbers. Use the privacy center to request access, correction, or
+      deletion. Sales-oriented profiles may reappear after a new data purchase.
+
+  - id: apollo-io
+    name: Apollo.io
+    regions: [US, GLOBAL]
+    category: data_broker
+    domains: [apollo.io]
+    optout_url: https://www.apollo.io/privacy-policy
+    method: privacy request
+    difficulty: hard
+    minutes: 20
+    requirements: Work email and profile details
+    notes: >-
+      B2B contact and enrichment database. Use the privacy contact or data
+      subject request process in the policy; ask for deletion and suppression
+      from future imports.
+
+  - id: lusha
+    name: Lusha
+    regions: [US, UK, GLOBAL]
+    category: data_broker
+    domains: [lusha.com]
+    optout_url: https://www.lusha.com/privacy-center/
+    method: privacy request / opt-out
+    difficulty: medium
+    minutes: 15
+    requirements: Work email and profile URL
+    notes: >-
+      B2B contact database. The privacy center explains access, deletion, and
+      opt-out routes. Check both personal and work email addresses.
+
+  - id: rocketreach
+    name: RocketReach
+    regions: [US, GLOBAL]
+    category: data_broker
+    domains: [rocketreach.co]
+    optout_url: https://knowledgebase.rocketreach.co/hc/en-us/articles/33925148823323-How-do-I-Remove-My-Information-from-RocketReach
+    method: web form / email verification
+    difficulty: medium
+    minutes: 15
+    requirements: Profile URL and email verification
+    notes: >-
+      Professional contact database. Follow its current removal instructions;
+      the process may require proving control of the email address.
+
+  - id: cognism
+    name: Cognism
+    regions: [UK, GLOBAL]
+    category: data_broker
+    domains: [cognism.com]
+    optout_url: https://www.cognism.com/en/privacy-policy
+    method: privacy request
+    difficulty: hard
+    minutes: 20
+    requirements: Work email and identity details
+    notes: >-
+      B2B sales-intelligence data. Use the privacy contact in the policy and
+      ask for access, correction, deletion, and suppression from future lists.
+
+  - id: google-results-about-you
+    name: Google — Results about you
+    regions: [GLOBAL]
+    category: search_engine
+    domains: []
+    optout_url: https://myactivity.google.com/results-about-you
+    method: Google account tool
+    difficulty: easy
+    minutes: 5
+    requirements: A Google account and the URL of the result
+    notes: >-
+      Proactively monitors for pages containing your name, address, phone and
+      email in supported countries. It removes results from Google Search, not
+      from the underlying website. Availability varies by country.
+
+  - id: google-search-removal
+    name: Google — Remove personal information from Search
+    regions: [GLOBAL]
+    category: search_engine
+    domains: []
+    optout_url: https://support.google.com/websearch/answer/9673730
+    method: request form
+    difficulty: medium
+    minutes: 10
+    requirements: Specific URLs and an explanation of the harm
+    notes: >-
+      Use for doxxing, identity theft, explicit content, or other covered
+      sensitive information. Ordinary “embarrassing but public” pages usually
+      do not qualify. Removing the source page is more durable.
+
+  - id: google-outdated-content
+    name: Google — Outdated content removal
+    regions: [GLOBAL]
+    category: search_engine
+    domains: []
+    optout_url: https://search.google.com/search-console/remove-outdated-content
+    method: request form
+    difficulty: easy
+    minutes: 5
+    requirements: The page must have changed or been removed
+    notes: >-
+      Use after a page is deleted or updated. This clears the cached snippet;
+      it is not a privacy deletion request.
+
+  - id: bing-content-removal
+    name: Bing — Content removal
+    regions: [GLOBAL]
+    category: search_engine
+    domains: []
+    optout_url: https://www.bing.com/webmasters/tools/contentremoval
+    method: web form (sign-in)
+    difficulty: medium
+    minutes: 10
+    requirements: Microsoft account and result URLs
+    notes: >-
+      Bing also honors robots.txt, noindex, and removal at the source. A page
+      removed from Bing may remain in other indexes.
+
+  - id: duckduckgo-removal
+    name: DuckDuckGo — Removing content
+    regions: [GLOBAL]
+    category: search_engine
+    domains: []
+    optout_url: https://duckduckgo.com/duckduckgo-help-pages/company/removing-content
+    method: source removal / request
+    difficulty: medium
+    minutes: 10
+    requirements: The source page or a legal removal basis
+    notes: >-
+      DuckDuckGo mostly uses Bing's index. Remove or update the source first,
+      then use DuckDuckGo's guidance for anything that remains.
+
+  - id: internet-archive
+    name: Internet Archive — Exclusion
+    regions: [GLOBAL]
+    category: search_engine
+    domains: []
+    optout_url: https://help.archive.org/
+    method: exclusion request
+    difficulty: hard
+    minutes: 20
+    requirements: Proof you control the site or a legal basis
+    notes: >-
+      The Wayback Machine keeps historical copies. Site owners can request
+      exclusion; individuals generally need a legal or safety basis. Ask
+      politely and do not assume every snapshot will be removed.
+
+  - id: spokeo
+    name: Spokeo
+    regions: [US]
+    category: people_search
+    domains: [spokeo.com, anywho.com]
+    optout_url: https://www.spokeo.com/optout
+    method: web form + email confirmation
+    difficulty: medium
+    minutes: 10
+    requirements: Profile URL and email address
+    notes: >-
+      Spokeo owns AnyWho. Opt out separately for each listing. Recheck after
+      about 30 days; records can be recreated from public sources.
+
+  - id: whitepages-us
+    name: Whitepages (US)
+    regions: [US]
+    category: people_search
+    domains: [whitepages.com]
+    optout_url: https://www.whitepages.com/suppression-requests
+    method: phone verification form
+    difficulty: medium
+    minutes: 15
+    requirements: Listing URL and a phone number for verification
+    notes: >-
+      Whitepages may require a verification call. Supports suppression of a
+      specific record. Its premium and background-check products are separate.
+
+  - id: beenverified
+    name: BeenVerified
+    regions: [US]
+    category: people_search
+    domains: [beenverified.com]
+    optout_url: https://www.beenverified.com/app/optout/search
+    method: web form + email confirmation
+    difficulty: medium
+    minutes: 10
+    requirements: Profile URL and email address
+    notes: >-
+      The same parent company has offered other brands and may send marketing
+      email during opt-out. Do not pay a removal fee.
+
+  - id: truepeoplesearch
+    name: TruePeopleSearch
+    regions: [US]
+    category: people_search
+    domains: [truepeoplesearch.com]
+    optout_url: https://www.truepeoplesearch.com/removal
+    method: web form
+    difficulty: easy
+    minutes: 5
+    requirements: Profile URL
+    notes: >-
+      Free people-search site. Removal can require a CAPTCHA and may take
+      several days. Recheck periodically.
+
+  - id: fastpeoplesearch
+    name: FastPeopleSearch
+    regions: [US]
+    category: people_search
+    domains: [fastpeoplesearch.com]
+    optout_url: https://www.fastpeoplesearch.com/removal
+    method: web form
+    difficulty: easy
+    minutes: 5
+    requirements: Profile URL
+    notes: Free people-search site; bot protection is common. Use a browser.
+
+  - id: radaris
+    name: Radaris
+    regions: [US, GLOBAL]
+    category: people_search
+    domains: [radaris.com]
+    optout_url: https://radaris.com/control/privacy
+    method: web form / account
+    difficulty: hard
+    minutes: 20
+    requirements: Profile URL and email verification
+    notes: >-
+      May require creating an account. Some records are served from country
+      domains; search the exact name and location before opting out.
+
+  - id: mylife
+    name: MyLife
+    regions: [US]
+    category: people_search
+    domains: [mylife.com]
+    optout_url: https://www.mylife.com/ccpa/index.pubview
+    method: web form + phone verification
+    difficulty: hard
+    minutes: 20
+    requirements: Profile URL and phone number
+    notes: >-
+      Has a reputation for aggressive marketing. Use a dedicated email and
+      do not provide more identity data than the request requires.
+
+  - id: peoplefinders
+    name: PeopleFinders
+    regions: [US]
+    category: people_search
+    domains: [peoplefinders.com]
+    optout_url: https://www.peoplefinders.com/opt-out
+    method: web form + email confirmation
+    difficulty: medium
+    minutes: 10
+    requirements: Profile URL and email address
+    notes: Owns or operates related people-search brands; check the email confirmation.
+
+  - id: intelius
+    name: Intelius
+    regions: [US]
+    category: people_search
+    domains: [intelius.com]
+    optout_url: https://www.intelius.com/opt-out
+    method: web form + email confirmation
+    difficulty: medium
+    minutes: 10
+    requirements: Profile URL and email address
+    notes: Part of a family of background-check brands; opt out of each listing you find.
+
+  - id: usphonebook
+    name: USPhoneBook
+    regions: [US]
+    category: people_search
+    domains: [usphonebook.com]
+    optout_url: https://www.usphonebook.com/opt-out
+    method: web form
+    difficulty: easy
+    minutes: 5
+    requirements: Listing URL
+    notes: Phone-number-oriented directory. Search both your number and your name.
+
+  - id: zabasearch
+    name: ZabaSearch
+    regions: [US]
+    category: people_search
+    domains: [zabasearch.com]
+    optout_url: https://www.zabasearch.com/block_records/
+    method: web form / fax
+    difficulty: hard
+    minutes: 20
+    requirements: Listing URL, sometimes written request
+    notes: An older directory with a slow process. Escalate in writing if the form fails.
+
+  - id: nuwber
+    name: Nuwber
+    regions: [US, GLOBAL]
+    category: people_search
+    domains: [nuwber.com]
+    optout_url: https://nuwber.com/removal
+    method: web form + email verification
+    difficulty: medium
+    minutes: 10
+    requirements: Profile URL and email address
+    notes: Supports removal requests through its site; recheck after 30 days.
+
+  - id: truthfinder
+    name: TruthFinder
+    regions: [US]
+    category: people_search
+    domains: [truthfinder.com]
+    optout_url: https://www.truthfinder.com/opt-out/
+    method: web form + email confirmation
+    difficulty: medium
+    minutes: 10
+    requirements: Profile URL and email address
+    notes: Subscription background-check service; opt-out is separate from cancellation.
+
+  - id: infotracer
+    name: InfoTracer
+    regions: [US]
+    category: people_search
+    domains: [infotracer.com]
+    optout_url: https://infotracer.com/optout/
+    method: web form / email
+    difficulty: medium
+    minutes: 10
+    requirements: Profile URL
+    notes: May require an email exchange. Keep the confirmation.
+
+  - id: peoplesmart
+    name: PeopleSmart
+    regions: [US]
+    category: people_search
+    domains: [peoplesmart.com]
+    optout_url: https://www.peoplesmart.com/optout
+    method: web form + email confirmation
+    difficulty: medium
+    minutes: 10
+    requirements: Profile URL and email address
+    notes: Background-check brand; check related listings after confirmation.
+
+  - id: smartbackgroundchecks
+    name: SmartBackgroundChecks
+    regions: [US]
+    category: people_search
+    domains: [smartbackgroundchecks.com]
+    optout_url: https://www.smartbackgroundchecks.com/optout
+    method: web form
+    difficulty: easy
+    minutes: 5
+    requirements: Listing URL
+    notes: Free directory; use a dedicated email address for verification.
+
+  - id: clustrmaps
+    name: ClustrMaps
+    regions: [US, GLOBAL]
+    category: people_search
+    domains: [clustrmaps.com]
+    optout_url: https://clustrmaps.com/bl/opt-out
+    method: web form
+    difficulty: medium
+    minutes: 10
+    requirements: Listing URL
+    notes: Maps and address history can be especially sensitive. Recheck the exact address variants.
+
+  - id: acxiom-us
+    name: Acxiom (US)
+    regions: [US]
+    category: advertising
+    domains: [acxiom.com]
+    optout_url: https://isapps.acxiom.com/optout/optout.aspx
+    method: web form
+    difficulty: medium
+    minutes: 10
+    requirements: Name and address
+    notes: >-
+      Advertising and marketing data rather than a public people-search page.
+      Opt out of marketing use; some legal retention may remain.
+
+  - id: lexisnexis-us
+    name: LexisNexis (US)
+    regions: [US]
+    category: data_broker
+    domains: [lexisnexis.com]
+    optout_url: https://optout.lexisnexis.com/
+    method: web form / identity verification
+    difficulty: hard
+    minutes: 20
+    requirements: Identity verification
+    notes: >-
+      Holds public-record and risk data. You can suppress marketing or request
+      access/deletion where the law applies; some records are retained for
+      legal or fraud-prevention reasons.
+
+  - id: whitepages-au
+    name: White Pages Australia
+    regions: [AU]
+    category: directory
+    domains: [whitepages.com.au]
+    optout_url: https://help.whitepages.com.au/residential-listings/my-residential-listing/
+    method: telco listing change
+    difficulty: medium
+    minutes: 15
+    requirements: The phone number and carrier account authority
+    notes: >-
+      Residential directory listings are supplied through carriers. Ask your
+      telco to suppress or remove the directory entry; changes can take a
+      billing cycle. The help site's TLS certificate may need a browser.
+
+  - id: acxiom-au
+    name: Acxiom Australia
+    regions: [AU]
+    category: advertising
+    domains: [acxiom.com.au]
+    optout_url: https://www.acxiom.com/privacy/australia-data-products-privacy-policy/
+    method: privacy request
+    difficulty: hard
+    minutes: 20
+    requirements: A written privacy request with enough detail to identify you
+    notes: >-
+      Use the privacy contact in Acxiom's Australian policy. Ask for access,
+      correction, and opt-out of marketing data. This is not a people-search
+      listing removal.
+
+  - id: lexisnexis-au
+    name: LexisNexis Australia
+    regions: [AU]
+    category: data_broker
+    domains: [lexisnexis.com.au]
+    optout_url: https://www.lexisnexis.com/en-au
+    method: privacy request
+    difficulty: hard
+    minutes: 20
+    requirements: Written request under applicable privacy law
+    notes: >-
+      Risk and public-record data. Contact its Australian privacy team and ask
+      for access, correction, and any available suppression. Some records are
+      exempt or retained by law.
+
+  - id: equifax-au
+    name: Equifax Australia — Credit ban
+    regions: [AU]
+    category: credit_bureau
+    domains: [equifax.com.au]
+    optout_url: https://equifax.com.au/personal/help-centre/credit-report-ban
+    method: identity-verified request
+    difficulty: hard
+    minutes: 30
+    requirements: Identity documents and a police/cybercrime report if available
+    notes: >-
+      A credit ban is not deletion: it restricts access to your credit report
+      while a ban is active. Consider it after identity theft, not as routine
+      footprint cleanup. Check current duration and extension rules.
+
+  - id: experian-au
+    name: Experian Australia — Credit ban
+    regions: [AU]
+    category: credit_bureau
+    domains: [experian.com.au]
+    optout_url: https://www.experian.com.au/personal/credit-report/credit-ban
+    method: identity-verified request
+    difficulty: hard
+    minutes: 30
+    requirements: Identity documents
+    notes: >-
+      Credit reporting is regulated separately from marketing data. Ask about
+      a ban only if you are at risk of identity fraud, and keep the confirmation.
+
+  - id: 192-uk
+    name: 192.com
+    regions: [UK]
+    category: directory
+    domains: [192.com]
+    optout_url: https://www.192.com/help/remove-my-record/
+    method: web form / email
+    difficulty: medium
+    minutes: 15
+    requirements: Listing URL and proof of identity
+    notes: >-
+      UK directory and people-search service. Some records come from the
+      electoral roll; removing the online record may not change the public roll.
