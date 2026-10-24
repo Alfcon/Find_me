@@ -20,6 +20,17 @@ FINDING_STATUSES = {
     "monitoring",
     "false_positive",
 }
+REQUEST_STATUSES = {
+    "prepared",
+    "awaiting_user",
+    "submitted",
+    "in_progress",
+    "removed",
+    "still_listed",
+    "reappeared",
+    "blocked",
+    "failed",
+}
 BROKER_STATUSES = {
     "not_checked",
     "no_listing",
@@ -78,6 +89,31 @@ CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings(severity);
 CREATE INDEX IF NOT EXISTS idx_findings_status ON findings(status);
 CREATE INDEX IF NOT EXISTS idx_findings_kind ON findings(kind);
 CREATE INDEX IF NOT EXISTS idx_findings_last_seen ON findings(last_seen);
+
+CREATE TABLE IF NOT EXISTS removal_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_key TEXT NOT NULL UNIQUE,
+    finding_id INTEGER,
+    broker_id TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL,
+    method TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL DEFAULT '',
+    verify_url TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'prepared',
+    priority TEXT NOT NULL DEFAULT 'P2',
+    created_at TEXT NOT NULL,
+    submitted_at TEXT,
+    due_at TEXT,
+    last_checked_at TEXT,
+    reference TEXT NOT NULL DEFAULT '',
+    evidence TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    details_json TEXT NOT NULL DEFAULT '{}',
+    FOREIGN KEY (finding_id) REFERENCES findings(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_requests_status ON removal_requests(status);
+CREATE INDEX IF NOT EXISTS idx_requests_due ON removal_requests(due_at);
 
 CREATE TABLE IF NOT EXISTS broker_status (
     broker_id TEXT PRIMARY KEY,
@@ -383,6 +419,147 @@ class Store:
         except json.JSONDecodeError:
             item["details"] = {}
         return item
+
+    # ------------------------------------------------------------------
+    # Removal requests
+    # ------------------------------------------------------------------
+    def create_request(self, request: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+        key = str(request["request_key"])
+        existing = self.get_request_by_key(key)
+        if existing:
+            return existing, False
+        now = iso_now()
+        cursor = self.conn.execute(
+            """
+            INSERT INTO removal_requests(
+                request_key, finding_id, broker_id, title, method, url, verify_url,
+                status, priority, created_at, submitted_at, due_at, last_checked_at,
+                reference, evidence, notes, details_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                key,
+                request.get("finding_id"),
+                request.get("broker_id", ""),
+                request.get("title", ""),
+                request.get("method", ""),
+                request.get("url", ""),
+                request.get("verify_url", ""),
+                request.get("status", "prepared"),
+                request.get("priority", "P2"),
+                request.get("created_at") or now,
+                request.get("submitted_at"),
+                request.get("due_at"),
+                request.get("last_checked_at"),
+                request.get("reference", ""),
+                request.get("evidence", ""),
+                request.get("notes", ""),
+                json.dumps(request.get("details", {}), ensure_ascii=False),
+            ),
+        )
+        self.conn.commit()
+        created = self.get_request(int(cursor.lastrowid))
+        return created or {}, True
+
+    def get_request(self, request_id: int) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM removal_requests WHERE id = ?", (request_id,)
+        ).fetchone()
+        return self._decode_request(row) if row else None
+
+    def get_request_by_key(self, key: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM removal_requests WHERE request_key = ?", (key,)
+        ).fetchone()
+        return self._decode_request(row) if row else None
+
+    def list_requests(
+        self,
+        status: str | None = None,
+        *,
+        due_only: bool = False,
+        limit: int = 500,
+    ) -> list[dict[str, Any]]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if status and status != "all":
+            if status == "open":
+                clauses.append(
+                    "status NOT IN ('removed', 'failed')"
+                )
+            else:
+                clauses.append("status = ?")
+                params.append(status)
+        if due_only:
+            clauses.append("due_at IS NOT NULL AND due_at != '' AND due_at <= ?")
+            params.append(iso_now())
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+        params.append(limit)
+        rows = self.conn.execute(
+            f"SELECT * FROM removal_requests {where} ORDER BY "
+            "CASE status WHEN 'reappeared' THEN 0 WHEN 'still_listed' THEN 1 "
+            "WHEN 'submitted' THEN 2 WHEN 'in_progress' THEN 3 ELSE 4 END, "
+            "due_at IS NULL, due_at, id LIMIT ?",
+            params,
+        ).fetchall()
+        return [self._decode_request(row) for row in rows]
+
+    def update_request(self, request_id: int, **fields: Any) -> dict[str, Any] | None:
+        allowed = {
+            "status",
+            "priority",
+            "submitted_at",
+            "due_at",
+            "last_checked_at",
+            "reference",
+            "evidence",
+            "notes",
+            "details",
+            "title",
+            "method",
+            "url",
+            "verify_url",
+        }
+        current = self.get_request(request_id)
+        if not current:
+            return None
+        values: dict[str, Any] = {}
+        for key, value in fields.items():
+            if key not in allowed:
+                raise ValueError(f"unsupported request field: {key}")
+            if key == "details":
+                values["details_json"] = json.dumps(value or {}, ensure_ascii=False)
+            elif key == "notes":
+                new_notes = str(value or "")
+                if current.get("notes") and new_notes:
+                    values["notes"] = current["notes"].rstrip() + "\n" + new_notes
+                else:
+                    values["notes"] = new_notes or current.get("notes", "")
+            else:
+                values[key] = value
+        if not values:
+            return current
+        assignments = ", ".join(f"{key} = ?" for key in values)
+        self.conn.execute(
+            f"UPDATE removal_requests SET {assignments} WHERE id = ?",
+            (*values.values(), request_id),
+        )
+        self.conn.commit()
+        return self.get_request(request_id)
+
+    def _decode_request(self, row: sqlite3.Row) -> dict[str, Any]:
+        item = dict(row)
+        try:
+            item["details"] = json.loads(item.pop("details_json") or "{}")
+        except json.JSONDecodeError:
+            item["details"] = {}
+        return item
+
+    def request_counts(self) -> dict[str, int]:
+        rows = self.conn.execute(
+            "SELECT status, COUNT(*) AS count FROM removal_requests GROUP BY status"
+        ).fetchall()
+        return {row["status"]: row["count"] for row in rows}
 
     # ------------------------------------------------------------------
     # Broker status

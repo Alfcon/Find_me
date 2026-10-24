@@ -197,8 +197,12 @@ footprint enrich 2 5           Enrich specific findings
 footprint scan --enrich        Scan, then fetch result pages automatically
 footprint scan --keep-profile  Keep profile.yaml after the run
 footprint report --keep-profile Keep profile.yaml after the report
-footprint add-url <url>        Track a result you found in a browser
-footprint annotate <id>        Record fields you can see on a site manually
+footprint request <id>          Prepare a tracked removal request
+footprint requests              List request status and deadlines
+footprint request-update <id>   Record submitted/reference/notes/due date
+footprint verify --due          Recheck public listings and update status
+footprint add-url <url>         Track a result you found in a browser
+footprint annotate <id>         Record fields you can see on a site manually
 footprint findings             List stored findings
 footprint show <id>            Show what one source appears to have
 footprint show <id> --json     Raw JSON record
@@ -266,6 +270,47 @@ footprint add-url "https://www.zoominfo.com/p/Example-Person/123456" \
 
 The URL is checked for safety, the domain is matched against the broker directory, and the result flows into the report and removal plan. Use `--fetch` to pull the page and extract detailed evidence automatically. This is the most reliable path when a search engine blocks automated requests.
 
+## Removal requests and verification
+
+The program prepares and tracks removal requests but never submits them automatically. This is deliberate: forms, phone verification, identity documents, and CAPTCHA handoffs stay under your control.
+
+Use `--keep-profile` for this workflow, because the default `run`/`report` clears `profile.yaml`:
+
+```bash
+footprint run --keep-profile
+```
+
+Prepare a request from a finding:
+
+```bash
+footprint request 2
+```
+
+Or from a broker with no finding:
+
+```bash
+footprint request --broker spokeo
+```
+
+The command gives you the official URL, required fields, a prepared email body, a deadline, and a tracker ID. After submitting it yourself:
+
+```bash
+footprint request-update 2 --status submitted --reference "REF-123" --notes "Submitted 24 Oct"
+```
+
+See what is due and verify it:
+
+```bash
+footprint requests --due
+footprint verify --due
+```
+
+Verification re-fetches the original public listing URL and checks for your configured identifiers. It marks the request `removed`, `still_listed`, `reappeared`, or `blocked`, and updates the finding/broker status. A 403 or challenge page is reported as blocked — never as removed.
+
+Request statuses: `prepared`, `awaiting_user`, `submitted`, `in_progress`, `still_listed`, `removed`, `reappeared`, `blocked`, `failed`.
+
+The verification is evidence, not a guarantee. Some pages need JavaScript or login, and some brokers recreate records later. Recheck quarterly.
+
 ### Tracking progress
 
 ```bash
@@ -302,6 +347,7 @@ The HTML report's checkboxes are a browser convenience. The CLI is the source of
 - a **data inventory** showing which data types appear across all sources (name, email, phone, address, date of birth, employer, job title, relatives, passwords, and more);
 - **site-by-site dossiers** that group findings by domain and show what that source appears to have;
 - per-finding “What this source appears to show” chips with observed versus possible fields;
+- a **removal tracker** with request status, deadline, reference, and last verification result;
 - detailed breach tables with breach name, date, record count, and exposed data classes;
 - every finding with evidence, confidence, source, and tracking command;
 - collapsible one-click links to run the exact queries in Google, Bing, and DuckDuckGo;
@@ -485,7 +531,7 @@ footprint/
   demo.py         safe sample data
   data/
     brokers.yaml
-tests/            66 offline unit tests
+tests/            70 offline unit tests
 config.example.yaml
 ```
 

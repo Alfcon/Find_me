@@ -23,3 +23,6 @@ htmlcov/
 .DS_Store
 .idea/
 .vscode/
+
+# Local virtualenv created by the user
+.find_me/

@@ -40,6 +40,11 @@ STATUS_LABELS = {
     "in_progress": "In progress",
     "done": "Done",
     "dismissed": "Dismissed",
+    "prepared": "Prepared",
+    "awaiting_user": "Awaiting user",
+    "submitted": "Submitted",
+    "still_listed": "Still listed",
+    "failed": "Failed",
 }
 
 SEVERITY_LABELS = {
@@ -58,6 +63,12 @@ STATUS_CLASS = {
     "reappeared": "status-alert",
     "monitoring": "status-monitor",
     "false_positive": "status-muted",
+    "prepared": "status-new",
+    "awaiting_user": "status-progress",
+    "submitted": "status-progress",
+    "still_listed": "status-alert",
+    "blocked": "status-alert",
+    "failed": "status-alert",
 }
 
 
@@ -116,6 +127,7 @@ def render_report(
     plan = build_plan(store, config, catalog)
     stats = store.stats()
     findings = store.list_findings(limit=10000)
+    requests = store.list_requests(limit=1000)
     runs = store.list_runs(limit=6)
     redacted = config.report.redact if redact is None else redact
     redactor = Redactor(config.profile.identifiers(include_locations=True), enabled=redacted)
@@ -130,7 +142,7 @@ def render_report(
         config.profile, config.search, catalog.filter_regions(config.brokers.regions)
     )
     payload = _report_payload(
-        config, stats, findings, plan, runs, redacted, redactor, generated
+        config, stats, findings, plan, runs, redacted, redactor, generated, requests
     )
     body = _render_body(
         config,
@@ -145,6 +157,7 @@ def render_report(
         queries,
         data_inventory,
         catalog,
+        requests,
     )
     document = _document(config.report.title, body, payload, generated)
     write_private_text(output, document)
@@ -190,6 +203,7 @@ def _render_body(
     queries: list | None = None,
     data_inventory: dict[str, Any] | None = None,
     catalog=None,
+    requests: list[dict[str, Any]] | None = None,
 ) -> str:
     score = int(stats.get("score", 0))
     band = str(stats.get("band", "Low"))
@@ -224,6 +238,7 @@ def _render_body(
         data_inventory or {"points": [], "counts": {}, "sites": []},
         redactor,
     )
+    requests_section = _render_requests(requests or [], redactor)
     redact_banner = (
         '<div class="banner banner-info"><strong>Redacted report.</strong> Identifiers and snippets are masked, '
         "but result URLs may still contain personal details. Review before sharing.</div>"
@@ -408,6 +423,8 @@ def _render_body(
     </div>
     <div class="actions">{actions_html}</div>
   </section>
+
+  {requests_section}
 
   <section id="brokers" class="section">
     <div class="section-head">
@@ -926,6 +943,43 @@ def _render_actions(plan: Plan, redactor: Redactor) -> str:
     return "".join(cards)
 
 
+def _render_requests(requests: list[dict[str, Any]], redactor: Redactor) -> str:
+    if not requests:
+        return ""
+    rows = []
+    for request in requests:
+        verification = (request.get("details") or {}).get("verification") or {}
+        reference = request.get("reference") or ""
+        due = str(request.get("due_at") or "")[:10]
+        rows.append(
+            f"<tr><td>#{request.get('id')}</td><td><strong>{e(redactor.text(str(request.get('title') or '')))}</strong>"
+            f"<span class='table-sub'>{e(str(request.get('method') or ''))}</span></td>"
+            f"<td>{_status_badge(str(request.get('status') or 'prepared'))}</td>"
+            f"<td>{e(str(request.get('priority') or ''))}</td>"
+            f"<td>{e(due or '—')}</td>"
+            f"<td>{e(reference or '—')}</td>"
+            f"<td>{e(compact(str(verification.get('reason') or verification.get('excerpt') or ''), 160))}</td></tr>"
+        )
+    return f"""
+<section id="requests" class="section">
+  <div class="section-head">
+    <div>
+      <div class="kicker">Removal tracker</div>
+      <h2>Requests and follow-ups</h2>
+    </div>
+    <span class="section-note">{len(requests)} request(s)</span>
+  </div>
+  <p class="section-intro">These are prepared removal requests with their current status, deadline, reference, and last verification result. Submit each request yourself; this tool does not auto-submit forms.</p>
+  <div class="table-wrap">
+    <table class="broker-table request-table">
+      <thead><tr><th>ID</th><th>Request</th><th>Status</th><th>Priority</th><th>Due</th><th>Reference</th><th>Latest verification</th></tr></thead>
+      <tbody>{''.join(rows)}</tbody>
+    </table>
+  </div>
+</section>
+"""
+
+
 def _render_brokers(plan: Plan, config: AppConfig) -> str:
     if not plan.broker_rows:
         return '<div class="empty-panel">No brokers in the configured regions.</div>'
@@ -1093,6 +1147,7 @@ def _report_payload(
     redacted: bool,
     redactor: Redactor,
     generated: str,
+    requests: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     safe_findings = []
     for finding in findings:
@@ -1124,6 +1179,7 @@ def _report_payload(
         "stats": stats,
         "findings": safe_findings,
         "data_inventory": redactor.obj(safe_inventory),
+        "removal_requests": redactor.obj(requests),
         "plan": plan_payload,
         "runs": runs,
     }

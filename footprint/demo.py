@@ -16,6 +16,7 @@ from .config import (
 )
 from .db import Store
 from .models import Finding
+from .removal import RemovalManager
 from .report import render_report
 from .util import ensure_private_dir, iso_now
 
@@ -468,6 +469,25 @@ def seed_demo(config: AppConfig) -> Store:
     store.update_broker("whitepages-us", "removed", notes="Suppression confirmed 12 October.")
     store.update_broker("truepeoplesearch", "listed", notes="Listing found; opt-out not yet submitted.")
     store.update_broker("equifax-au", "no_listing", notes="Checked; no public people-search listing.")
+    manager = RemovalManager(config, store)
+    try:
+        spokeo = manager.create_for_finding(ids["https://example.com/demo/spokeo-listing"]).request
+        if spokeo:
+            store.update_request(
+                spokeo["id"],
+                status="submitted",
+                reference="DEMO-OPT-OUT-001",
+                notes="Demo: submitted to the official opt-out page.",
+            )
+        github = manager.create_for_finding(ids["https://example.com/demo/github"]).request
+        if github:
+            store.update_request(
+                github["id"],
+                status="prepared",
+                notes="Demo: review public email and location before submitting.",
+            )
+    finally:
+        manager.close()
     return store
 
 

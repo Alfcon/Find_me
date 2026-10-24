@@ -30,11 +30,12 @@ from .config import (
     write_config,
 )
 from .data_points import LABELS, infer_data_points
-from .db import BROKER_STATUSES, FINDING_STATUSES, Store
+from .db import BROKER_STATUSES, FINDING_STATUSES, REQUEST_STATUSES, Store
 from .demo import run_demo
 from .enrich import Enricher
 from .models import Finding
 from .playbook import build_plan, plan_markdown
+from .removal import RemovalManager
 from .queries import build_queries
 from .report import render_report
 from .scan import Scanner, scan_exit_code
@@ -60,6 +61,14 @@ STATUS_LABELS = {
     "reappeared": "reappeared",
     "monitoring": "monitoring",
     "false_positive": "false positive",
+    "prepared": "prepared",
+    "awaiting_user": "awaiting user",
+    "submitted": "submitted",
+    "in_progress": "in progress",
+    "still_listed": "still listed",
+    "reappeared": "reappeared",
+    "blocked": "blocked",
+    "failed": "failed",
     "not_checked": "not checked",
     "no_listing": "no listing",
     "listed": "listed",
@@ -226,6 +235,39 @@ def build_parser() -> argparse.ArgumentParser:
     p_plan.add_argument("--format", choices=["markdown", "text"], default="text")
     p_plan.add_argument("--limit", type=int, default=None)
     p_plan.add_argument("--output", "-o", default=None, help="Write the plan to a file")
+
+    p_request = sub.add_parser(
+        "request", parents=[common], help="Prepare a tracked broker/site removal request"
+    )
+    p_request.add_argument("finding_id", nargs="?", type=int, help="Finding ID to remove")
+    p_request.add_argument("--broker", default=None, help="Broker ID when there is no finding")
+    p_request.add_argument("--notes", default="", help="Initial notes")
+    p_request.add_argument("--json", action="store_true")
+
+    p_requests = sub.add_parser("requests", parents=[common], help="List removal requests")
+    p_requests.add_argument("--status", default="all", choices=["all", "open", *sorted(REQUEST_STATUSES)])
+    p_requests.add_argument("--due", action="store_true", help="Only overdue requests")
+    p_requests.add_argument("--limit", type=int, default=100)
+    p_requests.add_argument("--json", action="store_true")
+
+    p_request_update = sub.add_parser(
+        "request-update", parents=[common], help="Update a removal request"
+    )
+    p_request_update.add_argument("id", type=int)
+    p_request_update.add_argument("--status", required=True, choices=sorted(REQUEST_STATUSES))
+    p_request_update.add_argument("--reference", default=None)
+    p_request_update.add_argument("--notes", default=None)
+    p_request_update.add_argument("--due", default=None, help="Follow-up date YYYY-MM-DD")
+    p_request_update.add_argument("--evidence", default=None, help="Confirmation/evidence text")
+
+    p_verify = sub.add_parser(
+        "verify", parents=[common], help="Recheck public listing URLs for removal"
+    )
+    p_verify.add_argument("ids", nargs="*", type=int)
+    p_verify.add_argument("--all", action="store_true", help="Verify all open requests")
+    p_verify.add_argument("--due", action="store_true", help="Verify open requests that are due")
+    p_verify.add_argument("--limit", type=int, default=50)
+    p_verify.add_argument("--json", action="store_true")
 
     p_export = sub.add_parser("export", parents=[common], help="Export findings as JSON or CSV")
     p_export.add_argument("--format", choices=["json", "csv"], default="json")
@@ -961,6 +1003,162 @@ def cmd_plan(args: argparse.Namespace) -> int:
         store.close()
 
 
+def cmd_request(args: argparse.Namespace) -> int:
+    config = _load(args)
+    store = Store(config.db_path)
+    manager = RemovalManager(config, store)
+    try:
+        if args.finding_id is None and not args.broker:
+            raise ConfigError("Give a finding ID or --broker <id>")
+        result = (
+            manager.create_for_finding(args.finding_id, notes=args.notes)
+            if args.finding_id is not None
+            else manager.create_for_broker(str(args.broker), notes=args.notes)
+        )
+        if not result.request:
+            raise ConfigError(result.message)
+        request = result.request
+        if args.json:
+            console.print_json(data=request)
+            return 0
+        details = request.get("details") or {}
+        console.print(
+            Panel(
+                f"[bold]{escape(request['title'])}[/bold]\n"
+                f"Request #{request['id']} · {escape(request['method'])} · "
+                f"{escape(request['status'])} · due {escape(str(request.get('due_at') or '—'))}\n"
+                f"[dim]{escape(request.get('url') or '')}[/dim]",
+                title="Removal request prepared",
+                border_style="green",
+            )
+        )
+        console.print(
+            f"[bold]What to do[/bold]\n"
+            f"1. Open the official URL above.\n"
+            f"2. Submit only the minimum information required.\n"
+            f"3. Save the confirmation/reference.\n"
+            f"4. Record it with: [bold]footprint request-update {request['id']} "
+            f"--status submitted --reference <reference>[/bold]\n"
+            f"5. Verify later with: [bold]footprint verify {request['id']}[/bold]"
+        )
+        if details.get("requirements"):
+            console.print(f"\n[bold]Requirements:[/bold] {escape(str(details['requirements']))}")
+        if details.get("fields"):
+            console.print("\n[bold]Fields to submit[/bold]")
+            for key, value in details["fields"].items():
+                if value:
+                    console.print(f"  {escape(str(key))}: {escape(str(value))}")
+        if details.get("email_body"):
+            console.print("\n[bold]Prepared email body[/bold]")
+            console.print(Panel(escape(str(details["email_body"])), border_style="dim"))
+        console.print(f"\n[dim]{escape(result.message)}[/dim]")
+        return 0
+    finally:
+        manager.close()
+        store.close()
+
+
+def cmd_requests(args: argparse.Namespace) -> int:
+    config = _load(args)
+    store = Store(config.db_path)
+    try:
+        requests = store.list_requests(
+            status=args.status,
+            due_only=args.due,
+            limit=args.limit,
+        )
+        if args.json:
+            console.print_json(data=requests)
+            return 0
+        if not requests:
+            console.print("[dim]No removal requests match.[/dim]")
+            return 0
+        table = Table(title="Removal requests")
+        table.add_column("ID", justify="right", style="dim")
+        table.add_column("Status")
+        table.add_column("Priority")
+        table.add_column("Request", overflow="fold")
+        table.add_column("Due")
+        table.add_column("Reference", overflow="fold")
+        for request in requests:
+            table.add_row(
+                str(request["id"]),
+                escape(STATUS_LABELS.get(request["status"], request["status"])),
+                escape(request["priority"]),
+                escape(compact(request["title"], 70)),
+                escape(str(request.get("due_at") or "—")[:10]),
+                escape(compact(request.get("reference") or "", 30)),
+            )
+        console.print(table)
+        console.print("[dim]Verify due requests with: footprint verify --due[/dim]")
+        return 0
+    finally:
+        store.close()
+
+
+def cmd_request_update(args: argparse.Namespace) -> int:
+    config = _load(args)
+    due = _parse_due(args.due) if args.due else None
+    store = Store(config.db_path)
+    try:
+        fields: dict[str, Any] = {"status": args.status}
+        if args.reference is not None:
+            fields["reference"] = args.reference
+        if args.notes is not None:
+            fields["notes"] = args.notes
+        if args.evidence is not None:
+            fields["evidence"] = args.evidence
+        if due is not None:
+            fields["due_at"] = due
+        if args.status in {"submitted", "in_progress"}:
+            fields["submitted_at"] = iso_now()
+        request = store.update_request(args.id, **fields)
+        if not request:
+            raise ConfigError(f"No removal request with id {args.id}")
+        console.print(
+            f"[green]✓[/green] Request #{args.id}: "
+            f"{escape(STATUS_LABELS.get(request['status'], request['status']))}"
+        )
+        return 0
+    finally:
+        store.close()
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    config = _load(args)
+    if not args.ids and not args.all and not args.due:
+        raise ConfigError("Give request IDs, or use --all/--due")
+    store = Store(config.db_path)
+    manager = RemovalManager(config, store)
+    try:
+        results = manager.verify_many(
+            args.ids or None,
+            due_only=args.due,
+            limit=args.limit,
+        )
+        if args.json:
+            console.print_json(data=results)
+            return 0
+        table = Table(title="Removal verification")
+        table.add_column("ID", justify="right", style="dim")
+        table.add_column("Status")
+        table.add_column("Check")
+        table.add_column("Evidence", overflow="fold")
+        for request in results:
+            verification = (request.get("details") or {}).get("verification") or {}
+            table.add_row(
+                str(request["id"]),
+                escape(STATUS_LABELS.get(request["status"], request["status"])),
+                escape(str(verification.get("status") or "")),
+                escape(compact(str(verification.get("reason") or verification.get("excerpt") or ""), 120)),
+            )
+        console.print(table)
+        return 0
+    finally:
+        manager.close()
+        store.close()
+
+
 def cmd_export(args: argparse.Namespace) -> int:
     config = _load(args)
     store = Store(config.db_path)
@@ -968,6 +1166,7 @@ def cmd_export(args: argparse.Namespace) -> int:
         findings = store.list_findings(status=args.status, limit=100000)
         plan = build_plan(store, config, load_catalog())
         stats = store.stats()
+        requests = store.list_requests(limit=1000)
         if args.format == "json":
             payload = {
                 "generated_at": iso_now(),
@@ -975,11 +1174,12 @@ def cmd_export(args: argparse.Namespace) -> int:
                 "profile": config.public_summary(redact=False),
                 "stats": stats,
                 "findings": findings,
+                "removal_requests": requests,
                 "plan": plan.as_dict(),
             }
             content = json.dumps(payload, ensure_ascii=False, indent=2)
         else:
-            content = _findings_csv(findings, config.profile)
+            content = _findings_csv(findings, config.profile, requests)
         if args.output:
             output = Path(args.output).expanduser()
             if not output.is_absolute():
@@ -1267,7 +1467,7 @@ def _open(path: Path) -> None:
         console.print(f"[yellow]Could not open a browser. Open {escape(str(path))} manually.[/yellow]")
 
 
-def _findings_csv(findings: Iterable[dict[str, Any]], profile) -> str:
+def _findings_csv(findings: Iterable[dict[str, Any]], profile, requests: list[dict[str, Any]] | None = None) -> str:
     import io
 
     buffer = io.StringIO()
@@ -1289,8 +1489,16 @@ def _findings_csv(findings: Iterable[dict[str, Any]], profile) -> str:
         "snippet",
         "data_points",
         "page_enrichment",
+        "request_status",
+        "request_due",
+        "request_reference",
         "notes",
     ]
+    request_by_finding = {
+        int(request["finding_id"]): request
+        for request in (requests or [])
+        if request.get("finding_id")
+    }
     writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
     for finding in findings:
@@ -1303,6 +1511,10 @@ def _findings_csv(findings: Iterable[dict[str, Any]], profile) -> str:
         )
         enrichment = (row.get("details") or {}).get("enrichment") or {}
         row["page_enrichment"] = enrichment.get("status", "")
+        request = request_by_finding.get(int(finding["id"]), {})
+        row["request_status"] = request.get("status", "")
+        row["request_due"] = request.get("due_at", "")
+        row["request_reference"] = request.get("reference", "")
         row["details"] = ""
         writer.writerow(row)
     return buffer.getvalue()
@@ -1333,6 +1545,10 @@ def main(argv: list[str] | None = None) -> int:
             "broker-update": cmd_broker_update,
             "searches": cmd_searches,
             "plan": cmd_plan,
+            "request": cmd_request,
+            "requests": cmd_requests,
+            "request-update": cmd_request_update,
+            "verify": cmd_verify,
             "export": cmd_export,
             "demo": cmd_demo,
             "doctor": cmd_doctor,
